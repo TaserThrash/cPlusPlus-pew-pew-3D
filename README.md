@@ -1,1 +1,2 @@
-I an sorry layering is not working 
+I am sorry layering is not working.
+You can add "|| true" to line 245

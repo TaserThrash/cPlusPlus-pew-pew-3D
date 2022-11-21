@@ -1,3 +1,3 @@
-I am sorry layering is not working.
-You can add "|| true" to line 245 or you can try to fix it.
+I am sorry layering was not working.
+I added a fix and it works pretty good and pretty fast.
 

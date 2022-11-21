@@ -163,44 +163,91 @@ class Wall{
 			}
 		}
 	}
-};
+	
+	public:
+	
+	getRightWall(){
+		float rightest = -1;
+		for(int i = 0; i < 4; i++){
+			float *v1 = v[i];
+			float *v2 = v[(i + 1) % 4];
+			float d1 = 2 / sqrt(pow(x - v1[0], 2) + pow(y - v1[1], 2));
+			float d2 = 2 / sqrt(pow(x - v2[0], 2) + pow(y - v2[1], 2));
+			float a1 = atan2(x - v1[0], y - v1[1]) - r;
+			a1 = atan2(sin(a1), cos(a1));
+			float a2 = atan2(x - v2[0], y - v2[1]) - r;
+			a2 = atan2(sin(a2), cos(a2));
+			float xx1 = 1 / fov * a1;
+			float xx2 = 1 / fov * a2;
+			d1 *= cos(a1);
+			d2 *= cos(rightest = xx1);
+			if(xx1 > xx2 && xx1 > rightest){
+				rightest = xx1;
+			}
+			else if(xx2 > xx1 && xx2 > rightest){
+				rightest = xx2;
+			}
+		}
+		return rightest;
+	}
+	
+	public:
+	getLeftWall(){
+		float leftest = 1;
+		for(int i = 0; i < 4; i++){
+			float *v1 = v[i];
+			float *v2 = v[(i + 1) % 4];
+			float d1 = 2 / sqrt(pow(x - v1[0], 2) + pow(y - v1[1], 2));
+			float d2 = 2 / sqrt(pow(x - v2[0], 2) + pow(y - v2[1], 2));
+			float a1 = atan2(x - v1[0], y - v1[1]) - r;
+			a1 = atan2(sin(a1), cos(a1));
+			float a2 = atan2(x - v2[0], y - v2[1]) - r;
+			a2 = atan2(sin(a2), cos(a2));
+			float xx1 = 1 / fov * a1;
+			float xx2 = 1 / fov * a2;
+			d1 *= cos(a1);
+			d2 *= cos(a2);
+			if(xx1 < xx2 && xx1 < leftest){
+				leftest = xx1;
+			}
+			else if(xx2 < xx1 && xx2 < leftest){
+				leftest = xx2;
+			}
+		}
+		return leftest;
+	}
+	
+	public:
+	float getDist(){
+		float d;
+		
+		for(int i = 0; i < 4; i++){
+			float dd = sqrt(pow(x - v[i][0], 2) + pow(y - v[i][1], 2));
+			if(dd < d){
+				d = dd;
+			}
+		}
+		
+		return d;
+	}
+};	
 
 vector<Wall> walls;
 Wall edge = Wall(-w, -h, w, h);
 
-float check(float x1, float y1, float x2, float y2, float x3, float y3, float r){
-	float x4 = x3 - sin(r);
-	float y4 = y3 - cos(r);
-	float den = (x1 - x2)*(y3-y4)-(y1-y2)*(x3-x4);
-	if(den == 0){
-		return 1000;
-	}
-	
-	float t = ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4)) / den;
-	float u = -((x1-x2)*(y1-y3)-(y1-y2)*(x1-x3)) / den;
-	float xx = x1 + t * (x2 - x1);
-	float yy = y1 + t * (y2 - y1);
-	
-	if((0 < t && t < 1 && 0 < u)){
-		return sqrt(pow(x3 - xx, 2) + pow(y3 - yy, 2));
-	}
-	return 1000;
-	
-}
-
 float castt(float x, float y, float r){
 	float d = 1000;
+	float xx = 1 / fov * r;
 	for(int i = 0; i < walls.size(); i++){
-		for(int j = 0; j < 4; j++){
-			float cd = check(
-			 walls[i].v[(j+1) % 4][0],
-			 walls[i].v[(j+1) % 4][1],
-			 walls[i].v[j][0],
-			 walls[i].v[j][1],
-			 x, y, r
-			);
-			if(cd < d){
-				d = cd;
+		if(
+			walls[i].getRightWall() >= xx
+				&&
+			walls[i].getLeftWall() <= xx
+				&&
+			walls[i].getDist() < d
+		){
+			if(d > walls[i].getDist()){
+				d = walls[i].getDist();
 			}
 		}
 	}
@@ -220,13 +267,13 @@ class Object{
 		health = 0;
 	}
 	
-	col(){
+	float col(){
 		if(sqrt(pow(x - xx, 2) + pow(y - yy, 2)) < 0.05){
 			lose = 1;
 		}
 	}
 	
-	draw(){
+	void draw(){
 		
 		float w = 0.005;
 		float a = atan2(xx-x, yy-y);
@@ -236,8 +283,20 @@ class Object{
 		
 		bool h = true;
 		
-		if(castt(xx, yy, a) <= d){
+		/*if(castt(x, y, a) < d){
 			m2 = false;
+		}*/
+		
+		int num = 50;
+		
+		for(int i = 0; i < num; i++){
+			float xxx = x - (x - xx) / num * i;
+			float yyy = y - (y - yy) / num * i;
+			for(int i = 0; i < walls.size(); i++){
+				if(walls[i].col(xxx, yyy)){
+					m2 = false;
+				}
+			}
 		}
 		
 		a = atan2(x - xx, y - yy);
@@ -272,6 +331,20 @@ class Object{
 				yy = oy;
 			}
 		}
+	}
+	
+	getKilled(){
+		float d = sqrt(pow(x - xx, 2) + pow(y - yy, 2));
+		float a = atan2(x - xx, y - yy) - r;
+		a = atan2(sin(a), cos(a));
+		float xxx = 1 / fov * a;
+		float s = 1 / d;
+		
+		if(abs(xxx) < s / 2){
+			return true;
+		}
+		
+		return false;
 	}
 };
 
@@ -319,7 +392,7 @@ class Particle{
 		s = ss;
 	}
 	
-	draw(){
+	void draw(){
 		glBegin(GL_QUADS);
 		
 		glVertex2f(x - s / 2, y - s / 2);
@@ -425,7 +498,7 @@ void run(HDC hDC){
 		float vy = cos(r);
 		float xx = x;
 		float yy = y;
-		bool c = true;
+		/*bool c = true;
 		while(c){
 			if(abs(xx) > w || abs(yy) > h){
 				c = false;
@@ -446,6 +519,13 @@ void run(HDC hDC){
 					
 			xx -= vx * 0.005;
 			yy -= vy * 0.005;
+		}*/
+		
+		for(int i = 0; i < objects.size(); i++){
+			if(objects[i].getKilled()){
+				objects.erase(objects.begin() + i);
+				break;
+			}
 		}
 				
 		for(int i = 0; i < 50; i++){
@@ -652,7 +732,7 @@ int WINAPI WinMain (HINSTANCE hInstance,
     hWnd = CreateWindow (
       "GLSample", "OpenGL Sample", 
       WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE,
-      0, 0, 800, 800,
+      0, 0, 512, 512,
       NULL, NULL, hInstance, NULL);
 
     /* enable OpenGL for the window */

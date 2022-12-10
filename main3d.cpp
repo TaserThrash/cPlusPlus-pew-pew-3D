@@ -132,33 +132,49 @@ class Wall{
 		return x >= x1 && x <= x2 && y >= y1 && y <= y2;
 	}
 	
+	
 	draw(){
 		float v[4][2] = {{x1, y1}, {x2, y1}, {x2, y2}, {x1, y2}};
 		
+		float nv[4][2];
+		nv = v;
+		
+		float closest = sqrt(pow(v[0][0] - x, 2) + pow(v[0][1] - y, 2));
+		int closesti = 0;
+		
+		for(int i = 1; i < 4; i++){
+			if(sqrt(pow(v[i][0] - x, 2) + pow(v[i][1] - y, 2)) < closest){
+				closest = sqrt(pow(v[0][0] - x, 2) + pow(v[0][1] - y, 2));
+				closesti = i;
+			}
+		}
+		
 		for(int i = 0; i < 4; i++){
-			float *v1 = v[i];
-			float *v2 = v[(i + 1) % 4];
-			float d1 = 2 / sqrt(pow(x - v1[0], 2) + pow(y - v1[1], 2));
-			float d2 = 2 / sqrt(pow(x - v2[0], 2) + pow(y - v2[1], 2));
+			float *v1 = nv[i];
+			float *v2 = nv[(i + 1) % 4];
+			 
 			float a1 = atan2(x - v1[0], y - v1[1]) - r;
-			a1 = atan2(sin(a1), cos(a1));
 			float a2 = atan2(x - v2[0], y - v2[1]) - r;
+			a1 = atan2(sin(a1), cos(a1));
 			a2 = atan2(sin(a2), cos(a2));
 			float xx1 = 1 / fov * a1;
 			float xx2 = 1 / fov * a2;
+			float d1 = sqrt(pow(v1[0] - x, 2) + pow(v1[1] - y, 2));
+			float d2 = sqrt(pow(v2[0] - x, 2) + pow(v2[1] - y, 2));
 			d1 *= cos(a1);
 			d2 *= cos(a2);
+			d1 = 2 / d1;
+			d2 = 2 / d2;
 			
 			if(((xx1 > -2 && xx1 < 2) || (xx2 > -2 && xx2 < 2))){
 				glBegin(GL_QUADS);
-				glColor3f(0.7 - lose * 0.7, 0, 1 - lose);
-				glVertex2f(xx1, d1 / 2);
-				glColor3f(0.7 - lose * 0.7, 0, 0.23 - lose * 0.23);
+				
+				glColor3f(0,  0, 0);
 				glVertex2f(xx1, -d1 / 2);
-				glColor3f(0.2 - lose * 0.2, 0, 1 - lose);
 				glVertex2f(xx2, -d2 / 2);
-				glColor3f(0.9 - lose * 0.9, 0, 1 - lose);
+				glColor3f(1 - lose,  1 - lose, 1 - lose);
 				glVertex2f(xx2, d2 / 2);
+				glVertex2f(xx1, d1 / 2);
 				glEnd();
 			}
 		}
@@ -283,10 +299,7 @@ class Object{
 		
 		bool h = true;
 		
-		/*if(castt(x, y, a) < d){
-			m2 = false;
-		}*/
-		
+		//see if any of num points between player and object touch a wall
 		int num = 50;
 		
 		for(int i = 0; i < num; i++){
@@ -408,6 +421,7 @@ class Particle{
 	}
 };
 
+//later global variables
 vector<Object> objects;
 float ox = x;
 float oy = y;
@@ -415,13 +429,38 @@ int shootFrames = 40;
 vector<Particle> particles;
 bool pause = true;
 float fps = 60;
+bool spawned = false;
+float v = 0.024;
 
-void run(HDC hDC){
-	/* OpenGL animation code goes here */
-    glClearColor (1.0f, 1.0f - lose, 1.0f - lose, 0.0f);
-    glClear (GL_COLOR_BUFFER_BIT);
-    
-    for(int i = 0; i < walls.size(); i++){
+
+void move(){
+	//move forward if w or up arrow is pressed
+    if(GetAsyncKeyState(0x57) | GetAsyncKeyState(VK_UP)){
+       	x -= sin(r) * v;
+       	y -= cos(r) * v;
+	}
+	
+	//move backward if s or down arrow is pressed
+	if(GetAsyncKeyState(0x53) || GetAsyncKeyState(VK_DOWN)){
+      	x += sin(r) * v;
+      	y += cos(r) * v;
+	}
+	
+	//move right if d is pressed
+	if(GetAsyncKeyState(0x44)){
+      	x -= sin(r + pi / 2) * v;
+       	y -= cos(r + pi / 2) * v;
+	}
+	
+	//move left if s is pressed
+	if(GetAsyncKeyState(0x41)){
+       	x += sin(r + pi / 2) * v;
+       	y += cos(r + pi / 2) * v;
+	}
+}
+
+void stopWalkingThroughWalls(){
+	for(int i = 0; i < walls.size(); i++){
 		if(walls[i].col(x, y)){		
 			x = ox;
 			y = oy;
@@ -432,23 +471,27 @@ void run(HDC hDC){
 		x = ox;
 		y = oy;
 	}
-            
-    glPushMatrix();
-            
-	glColor3f(0, 0, 0);
+}
+
+void drawFloor(){
+	glPushMatrix();
             
     glBegin(GL_QUADS);
             
+    glColor3f(0, 0.6, 0);
     glVertex2f(-1, 0);
     glVertex2f(1, 0);
-    glVertex2f(1, -1);
+    glColor3f(0, 1, 0);
+	glVertex2f(1, -1);
     glVertex2f(-1, -1);
             
     glEnd();
             
     glPopMatrix();
-            
-    glPushMatrix();
+}
+
+void drawRoof(){
+	glPushMatrix();
             
 	glColor3f(0, 1 - lose, 1 - lose);
             
@@ -456,43 +499,27 @@ void run(HDC hDC){
             
     glVertex2f(-1, 0);
     glVertex2f(1, 0);
+    glColor3f(0, 0, 1);
     glVertex2f(1, 1);
     glVertex2f(-1, 1);
             
     glEnd();
             
     glPopMatrix();
-            
-    glPushMatrix();
+}
+
+void drawWalls(){
+	glPushMatrix();
             
     for(int i = 0; i < walls.size(); i++){
        	walls[i].draw();
 	}
-	
-	//rayCast();
             
     glPopMatrix();
-            
-    glPushMatrix();
-            
-    glColor3f(1 - lose, 0, 0);
-            
-    ox = x;
-    oy = y;
-            
-    for(int i = 0; i < objects.size(); i++){
-       	objects[i].col();
-       	objects[i].draw();
-	}
-			
-	if(lose == 1 && GetAsyncKeyState(VK_RETURN)){
-		lose = 0;
-		particles = {};
-		level = 6;
-		objects = {};
-	}
-			
-	if(GetAsyncKeyState(VK_SPACE) && shootFrames > fps * 2){
+}
+
+void shoot(){
+	if(GetAsyncKeyState(VK_SPACE) && shootFrames > fps / 2){
 		shootFrames = 0;
 		float vx = sin(r);
 		float vy = cos(r);
@@ -540,33 +567,73 @@ void run(HDC hDC){
 				
 		glEnd();
 	}
+}
+
+void spawn(){
+	if(time(0) % 2 == 0){
+		if(!spawned){
+			objects.push_back(makeObject());
+		}
+			
+		spawned = true;
+	}
+	else{
+		spawned = false;
+	}
+}
+
+void sort(){
+	vector<Wall> nwalls = walls;
+	for(int i = walls.size() - 1; i > 0; i--){
+		if(abs(walls[i].x1 - x) + abs(walls[i].y1 - y) > abs(walls[i - 1].x1 - x) + abs(walls[i - 1].y1 - y)){
+			Wall swapper = walls[i];
+			walls[i] = walls[i - 1];
+			walls[i - 1] = swapper;
+		}
+	}
+}
+
+void run(HDC hDC){
+	/* OpenGL animation code goes here */
+    glClearColor (1.0f, 1.0f - lose, 1.0f - lose, 0.0f);
+    glClear (GL_COLOR_BUFFER_BIT);
+    
+    sort();
+    stopWalkingThroughWalls();
+    drawFloor();
+    drawRoof();
+    drawWalls();        
+    
+            
+    glPushMatrix();
+            
+    glColor3f(1 - lose, 0, 0);
+            
+    ox = x;
+    oy = y;
+            
+    for(int i = 0; i < objects.size(); i++){
+       	objects[i].col();
+       	objects[i].draw();
+	}
+			
+	if(lose == 1 && GetAsyncKeyState(VK_RETURN)){
+		lose = 0;
+		particles = {};
+		level = 6;
+		objects = {};
+	}
+			
+	shoot();
 			
 	glPopMatrix();
             
     r += 0.000000625 * GetAsyncKeyState(VK_LEFT);
     r -= 0.000000625 * GetAsyncKeyState(VK_RIGHT);
-    float v = 0.024;
-    if(GetAsyncKeyState(0x57)){
-       	x -= sin(r) * v;
-       	y -= cos(r) * v;
-	}
-			
-	if(GetAsyncKeyState(0x53)){
-      	x += sin(r) * v;
-      	y += cos(r) * v;
-	}
-			
-	if(GetAsyncKeyState(0x44)){
-      	x -= sin(r + pi / 2) * v;
-       	y -= cos(r + pi / 2) * v;
-	}
-	if(GetAsyncKeyState(0x41)){
-       	x += sin(r + pi / 2) * v;
-       	y += cos(r + pi / 2) * v;
-	}
+    move();
 			
 	drawInt(0, 0.8, objects.size());
-	if(shootFrames < fps * 2)	
+	if(shootFrames < fps / 2)	
 		drawInt(0, 0.68, fps * 2 - shootFrames);
 			
 		glColor4f(1, 0.5, 0, 0);
@@ -614,13 +681,8 @@ void run(HDC hDC){
 		float dfps = 120;
 		Sleep(1000 / dfps * (fps / dfps));
 		shootFrames++;
-			
-		if(objects.size() == 0){
-			for(int i = 0; i < level; i++){
-    		objects.push_back(makeObject());
-		}
-		level++;
-	}
+		
+		spawn();
 }
 
 

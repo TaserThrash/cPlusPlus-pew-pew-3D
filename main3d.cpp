@@ -107,18 +107,22 @@ float x = 0;
 float y = 0;
 float r = 0;
 float pi = 3.141592653;
-float fov = pi / 12;
+float fov = pi / 3;
 float w = 5;
 float h = 5;
 float lose = 0;
 int start = 0;
+int score = 0;
 
 class Wall{
 	public:
+	
 	float x1;
 	float x2;
 	float y1;
 	float y2;
+	
+	
 	float v[4][2];
 	Wall(float xx1, float yy1, float xx2, float yy2){
 		x1 = xx1;
@@ -135,46 +139,101 @@ class Wall{
 	
 	draw(){
 		float v[4][2] = {{x1, y1}, {x2, y1}, {x2, y2}, {x1, y2}};
-		
-		float nv[4][2];
-		nv = v;
-		
 		float closest = sqrt(pow(v[0][0] - x, 2) + pow(v[0][1] - y, 2));
-		int closesti = 0;
+		int closestI = 0;
 		
-		for(int i = 1; i < 4; i++){
+		for(int i = 0; i < 4; i++){
 			if(sqrt(pow(v[i][0] - x, 2) + pow(v[i][1] - y, 2)) < closest){
-				closest = sqrt(pow(v[0][0] - x, 2) + pow(v[0][1] - y, 2));
-				closesti = i;
+				closest = sqrt(pow(v[i][0] - x, 2) + pow(v[i][1] - y, 2));
+				closestI = i;
 			}
 		}
 		
 		for(int i = 0; i < 4; i++){
-			float *v1 = nv[i];
-			float *v2 = nv[(i + 1) % 4];
-			 
+			float v1[2] = {0, 0};
+			if(i < 2){
+				v1[0] = v[(closestI + 2) % 2][0];
+				v1[1] = v[(closestI + 2) % 2][1];
+			}
+			else{
+				v1[0] = v[closestI][0];
+				v1[1] = v[closestI][1];
+			}
+			int ii;
+			if(i == 2){
+				float d1 = sqrt(pow(x - v[(closestI + 1) % 4][0], 2) + pow(y - v[(closestI + 1) % 4][1], 2));
+				float d2 = sqrt(pow(x - v[(closestI - 1) + 4 * ((closestI - 1) < 0)][0], 2) + pow(y - v[(closestI - 1) + 4 * ((closestI - 1) < 0)][1], 2));
+				if(d1 > d2){
+					ii = (closestI + 1) % 4;
+				}
+				else{
+					ii = (closestI - 1) + 4 * ((closestI - 1) < 0);
+				}
+			}
+			else if(i == 3){
+				float d1 = sqrt(pow(x - v[(closestI + 1) % 4][0], 2) + pow(y - v[(closestI + 1) % 4][1], 2));
+				float d2 = sqrt(pow(x - v[(closestI - 1) + 4 * ((closestI - 1) < 0)][0], 2) + pow(y - v[(closestI - 1) + 4 * ((closestI - 1) < 0)][1], 2));
+				if(d1 < d2){
+					ii = (closestI + 1) % 4;
+				}
+				else{
+					ii = (closestI - 1) + 4 * ((closestI - 1) < 0);
+				}
+			}
+			else if(i == 0){
+				float d1 = sqrt(pow(x - v[(closestI + 2 + 1) % 4][0], 2) + pow(y - v[(closestI + 2 + 1) % 4][1], 2));
+				float d2 = sqrt(pow(x - v[(closestI + 2 - 1) + 4 * ((closestI + 2 - 1) < 0)][0], 2) + pow(y - v[(closestI + 2 - 1) + 4 * ((closestI + 2 - 1) < 0)][1], 2));
+				if(d1 < d2){
+					ii = (closestI + 2 + 1) % 4;
+				}
+				else{
+					ii = ((closestI + 2 - 1) + 4 * ((closestI - 1 + 2) < 0)) % 4;
+				}
+			}
+			else if(i == 1){
+				float d1 = sqrt(pow(x - v[(closestI + 2 + 1) % 4][0], 2) + pow(y - v[(closestI + 1 + 2) % 4][1], 2));
+				float d2 = sqrt((pow(x - v[(closestI - 1 + 2) + 4 * ((closestI - 1 + 2) < 0) % 4][0], 2) + pow(y - v[(closestI - 1 + 2) + 4 * ((closestI - 1 + 2) < 0) % 4][1], 2)));
+				if(d1 > d2){
+					ii = (closestI + 2 + 1) % 4;
+				}
+				else{
+					ii = (closestI + 2 - 1) + 4 * ((closestI - 1 + 2) < 0);
+				}
+			}
+			if(ii < 0){
+				ii = 3;
+			}
+			float *v2 = v[ii];
+			
+			float dv = 1 / tan(fov) * 2;
+			
+			
+			float avx = v1[0] - x;
+			float avy = v1[1] - y;
+			float bvx = v2[0] - x;
+			float bvy = v2[1] - y;
 			float a1 = atan2(x - v1[0], y - v1[1]) - r;
 			float a2 = atan2(x - v2[0], y - v2[1]) - r;
-			a1 = atan2(sin(a1), cos(a1));
-			a2 = atan2(sin(a2), cos(a2));
-			float xx1 = 1 / fov * a1;
-			float xx2 = 1 / fov * a2;
-			float d1 = sqrt(pow(v1[0] - x, 2) + pow(v1[1] - y, 2));
-			float d2 = sqrt(pow(v2[0] - x, 2) + pow(v2[1] - y, 2));
-			d1 *= cos(a1);
-			d2 *= cos(a2);
-			d1 = 2 / d1;
-			d2 = 2 / d2;
+			float vx1 = avx * cos(r) - avy * sin(r);
+			float vy1 = avx * sin(r) + avy * cos(r);
+			float d1 = vy1;
+			float h1 = dv / d1;
+			float vx2 = bvx * cos(r) - bvy * sin(r);
+			float vy2 = bvx * sin(r) + bvy * cos(r);
+			float d2 = vy2;
+			float h2 = dv / d2;
+			float xx1 = vx1 * 1 / d1;
+			float xx2 = vx2 * 1 / d2;
 			
-			if(((xx1 > -2 && xx1 < 2) || (xx2 > -2 && xx2 < 2))){
+			if(vy1 < 0 && vy2 < 0){
 				glBegin(GL_QUADS);
 				
-				glColor3f(0,  0, 0);
-				glVertex2f(xx1, -d1 / 2);
-				glVertex2f(xx2, -d2 / 2);
-				glColor3f(1 - lose,  1 - lose, 1 - lose);
-				glVertex2f(xx2, d2 / 2);
-				glVertex2f(xx1, d1 / 2);
+				glColor3f(1, 0.7, 0);
+				glVertex2f(xx1, -h1 / 2);
+				glVertex2f(xx2, -h2 / 2);
+				glColor3f(0,  1 - lose, 1 - lose);
+				glVertex2f(xx2, h2 / 2);
+				glVertex2f(xx1, h1 / 2);
 				glEnd();
 			}
 		}
@@ -312,23 +371,28 @@ class Object{
 			}
 		}
 		
-		a = atan2(x - xx, y - yy);
-		
 		if(m2){
 			
-			a = atan2(x - xx, y - yy) - r;
-			a = atan2(sin(a), cos(a));
-			float xxx = 1 / fov * a;
+			float dv = 1 / tan(fov) * 2;
+			
+			float avx = xx - x;
+			float avy = yy - y;
+			float vx = avx * cos(r) - avy * sin(r);
+			float vy = avx * sin(r) + avy * cos(r);
+			float d = vy;
+			float xxx = vx / d;
 			float s = 1 / d;
 			
-			glBegin(GL_QUADS);
-			
-			glVertex2f((xxx + s / 4), s / 2);
-			glVertex2f((xxx + s / 4), -s / 2);
-			glVertex2f((xxx - s / 4), -s / 2);
-			glVertex2f((xxx - s / 4), s / 2);
-			
-			glEnd();
+			if(vy < 0){
+				glBegin(GL_QUADS);
+				
+				glVertex2f((xxx + s / 4), s / 2);
+				glVertex2f((xxx + s / 4), -s / 2);
+				glVertex2f((xxx - s / 4), -s / 2);
+				glVertex2f((xxx - s / 4), s / 2);
+				
+				glEnd();
+			}
 		}
 		
 		float ox = xx;
@@ -354,6 +418,7 @@ class Object{
 		float s = 1 / d;
 		
 		if(abs(xxx) < s / 2){
+			score++;
 			return true;
 		}
 		
@@ -493,13 +558,13 @@ void drawFloor(){
 void drawRoof(){
 	glPushMatrix();
             
-	glColor3f(0, 1 - lose, 1 - lose);
-            
     glBegin(GL_QUADS);
             
+    
+    glColor3f(0, 0, 1);
     glVertex2f(-1, 0);
     glVertex2f(1, 0);
-    glColor3f(0, 0, 1);
+    glColor3f(0, 1 - lose, 1 - lose);
     glVertex2f(1, 1);
     glVertex2f(-1, 1);
             
@@ -632,7 +697,7 @@ void run(HDC hDC){
     r -= 0.000000625 * GetAsyncKeyState(VK_RIGHT);
     move();
 			
-	drawInt(0, 0.8, objects.size());
+	drawInt(0, 0.8, score);
 	if(shootFrames < fps / 2)	
 		drawInt(0, 0.68, fps * 2 - shootFrames);
 			
@@ -685,6 +750,113 @@ void run(HDC hDC){
 		spawn();
 }
 
+void theWalls(){
+	walls.push_back(Wall(-5.5,-5.5,-5,-5)); 
+	walls.push_back(Wall(5,-5.5,5.5,-5)); 
+	walls.push_back(Wall(-5.5,5,-4.5,5.5)); 
+	walls.push_back(Wall(-5,-5.5,-4.5,-5)); 
+	walls.push_back(Wall(-5.5,-5,-5,-4.5)); 
+	walls.push_back(Wall(5,-5,5.5,-4.5)); 
+	walls.push_back(Wall(-5,5,-4,5.5)); 
+	walls.push_back(Wall(-4.5,-5.5,-4,-5)); 
+	walls.push_back(Wall(-5.5,-4.5,-5,-4)); 
+	walls.push_back(Wall(5,-4.5,5.5,-4)); 
+	walls.push_back(Wall(-4.5,5,-3.5,5.5)); 
+	walls.push_back(Wall(-4,-5.5,-3.5,-5)); 
+	walls.push_back(Wall(-5.5,-4,-5,-3.5)); 
+	walls.push_back(Wall(5,-4,5.5,-3.5)); 
+	walls.push_back(Wall(-4,5,-3,5.5)); 
+	walls.push_back(Wall(-3.5,-5.5,-3,-5)); 
+	walls.push_back(Wall(-5.5,-3.5,-5,-3)); 
+	walls.push_back(Wall(5,-3.5,5.5,-3)); 
+	walls.push_back(Wall(-3.5,5,-2.5,5.5)); 
+	walls.push_back(Wall(-3,-5.5,-2.5,-5)); 
+	walls.push_back(Wall(-5.5,-3,-5,-2.5)); 
+	walls.push_back(Wall(5,-3,5.5,-2.5)); 
+	walls.push_back(Wall(-3,5,-2,5.5)); 
+	walls.push_back(Wall(-2.5,-5.5,-2,-5)); 
+	walls.push_back(Wall(-5.5,-2.5,-5,-2)); 
+	walls.push_back(Wall(5,-2.5,5.5,-2)); 
+	walls.push_back(Wall(-2.5,5,-1.5,5.5)); 
+	walls.push_back(Wall(-2,-5.5,-1.5,-5)); 
+	walls.push_back(Wall(-5.5,-2,-5,-1.5)); 
+	walls.push_back(Wall(5,-2,5.5,-1.5)); 
+	walls.push_back(Wall(-2,5,-1,5.5)); 
+	walls.push_back(Wall(-1.5,-5.5,-1,-5)); 
+	walls.push_back(Wall(-5.5,-1.5,-5,-1)); 
+	walls.push_back(Wall(5,-1.5,5.5,-1)); 
+	walls.push_back(Wall(-1.5,5,-0.5,5.5)); 
+	walls.push_back(Wall(-1,-5.5,-0.5,-5)); 
+	walls.push_back(Wall(-5.5,-1,-5,-0.5)); 
+	walls.push_back(Wall(5,-1,5.5,-0.5)); 
+	walls.push_back(Wall(-1,5,0,5.5)); 
+	walls.push_back(Wall(-0.5,-5.5,0,-5)); 
+	walls.push_back(Wall(-5.5,-0.5,-5,0)); 
+	walls.push_back(Wall(5,-0.5,5.5,0)); 
+	walls.push_back(Wall(-0.5,5,0.5,5.5)); 
+	walls.push_back(Wall(0,-5.5,0.5,-5)); 
+	walls.push_back(Wall(-5.5,0,-5,0.5)); 
+	walls.push_back(Wall(5,0,5.5,0.5)); 
+	walls.push_back(Wall(0,5,1,5.5)); 
+	walls.push_back(Wall(0.5,-5.5,1,-5)); 
+	walls.push_back(Wall(-5.5,0.5,-5,1)); 
+	walls.push_back(Wall(5,0.5,5.5,1)); 
+	walls.push_back(Wall(0.5,5,1.5,5.5)); 
+	walls.push_back(Wall(1,-5.5,1.5,-5)); 
+	walls.push_back(Wall(-5.5,1,-5,1.5)); 
+	walls.push_back(Wall(5,1,5.5,1.5)); 
+	walls.push_back(Wall(1,5,2,5.5)); 
+	walls.push_back(Wall(1.5,-5.5,2,-5)); 
+	walls.push_back(Wall(-5.5,1.5,-5,2)); 
+	walls.push_back(Wall(5,1.5,5.5,2)); 
+	walls.push_back(Wall(1.5,5,2.5,5.5)); 
+	walls.push_back(Wall(2,-5.5,2.5,-5)); 
+	walls.push_back(Wall(-5.5,2,-5,2.5)); 
+	walls.push_back(Wall(5,2,5.5,2.5)); 
+	walls.push_back(Wall(2,5,3,5.5)); 
+	walls.push_back(Wall(2.5,-5.5,3,-5)); 
+	walls.push_back(Wall(-5.5,2.5,-5,3)); 
+	walls.push_back(Wall(5,2.5,5.5,3)); 
+	walls.push_back(Wall(2.5,5,3.5,5.5)); 
+	walls.push_back(Wall(3,-5.5,3.5,-5)); 
+	walls.push_back(Wall(-5.5,3,-5,3.5)); 
+	walls.push_back(Wall(5,3,5.5,3.5)); 
+	walls.push_back(Wall(3,5,4,5.5)); 
+	walls.push_back(Wall(3.5,-5.5,4,-5)); 
+	walls.push_back(Wall(-5.5,3.5,-5,4)); 
+	walls.push_back(Wall(5,3.5,5.5,4)); 
+	walls.push_back(Wall(3.5,5,4.5,5.5)); 
+	walls.push_back(Wall(4,-5.5,4.5,-5)); 
+	walls.push_back(Wall(-5.5,4,-5,4.5)); 
+	walls.push_back(Wall(5,4,5.5,4.5)); 
+	walls.push_back(Wall(4,5,5,5.5)); 
+	walls.push_back(Wall(4.5,-5.5,5,-5)); 
+	walls.push_back(Wall(-5.5,4.5,-5,5)); 
+	walls.push_back(Wall(5,4.5,5.5,5)); 
+	walls.push_back(Wall(4.5,5,5.5,5.5)); 
+	walls.push_back(Wall(-3.65,-3.8,-3.15,-3.3)); 
+	walls.push_back(Wall(-0.7,-3.8,-0.2,-3.3)); 
+	walls.push_back(Wall(-1.65,-2,-1.15,-1.5)); 
+	walls.push_back(Wall(-3.2,-0.35,-2.7,0.15)); 
+	walls.push_back(Wall(-1.65,1.2,-1.15,1.7)); 
+	walls.push_back(Wall(-0.1,0.3,0.4,0.8)); 
+	walls.push_back(Wall(1.1,-0.9,1.6,-0.4)); 
+	walls.push_back(Wall(0.6,-1.95,1.1,-1.45)); 
+	walls.push_back(Wall(1.5,-2.55,2,-2.05)); 
+	walls.push_back(Wall(2.75,-1.3,3.25,-0.8)); 
+	walls.push_back(Wall(1.95,0.9,2.45,1.4)); 
+	walls.push_back(Wall(0.85,2.2,1.35,2.7)); 
+	walls.push_back(Wall(-0.75,3.15,-0.25,3.65)); 
+	walls.push_back(Wall(-2.2,2.3,-1.7,2.8)); 
+	walls.push_back(Wall(-3.4,2.85,-2.9,3.35)); 
+	walls.push_back(Wall(-3.3,1.5,-2.8,2)); 
+	walls.push_back(Wall(-4,-1.85,-3.5,-1.35)); 
+	walls.push_back(Wall(-3.5,-1.35,-3,-0.85)); 
+	walls.push_back(Wall(-3.5,-2.3,-3,-1.8)); 
+	walls.push_back(Wall(-3.5,-2.7,-3,-2.2)); 
+	walls.push_back(Wall(-2.5,-3.1,-2,-2.6)); 
+	walls.push_back(Wall(-1.35,-3.9,-0.85,-3.4)); 
+}
 
 int WINAPI WinMain (HINSTANCE hInstance,
                     HINSTANCE hPrevInstance,
@@ -716,71 +888,7 @@ int WINAPI WinMain (HINSTANCE hInstance,
     int tim = time(0);
     int fps = 120;
     
-    walls.push_back(Wall(-6,-6,-5,-5)); 
-	walls.push_back(Wall(5,-6,6,-5)); 
-	walls.push_back(Wall(-6,5,-4,6)); 
-	walls.push_back(Wall(-5,-6,-4,-5)); 
-	walls.push_back(Wall(-6,-5,-5,-4)); 
-	walls.push_back(Wall(5,-5,6,-4)); 
-	walls.push_back(Wall(-5,5,-3,6)); 
-	walls.push_back(Wall(-4,-6,-3,-5)); 
-	walls.push_back(Wall(-6,-4,-5,-3)); 
-	walls.push_back(Wall(5,-4,6,-3)); 
-	walls.push_back(Wall(-4,5,-2,6)); 
-	walls.push_back(Wall(-3,-6,-2,-5)); 
-	walls.push_back(Wall(-6,-3,-5,-2)); 
-	walls.push_back(Wall(5,-3,6,-2)); 
-	walls.push_back(Wall(-3,5,-1,6)); 
-	walls.push_back(Wall(-2,-6,-1,-5)); 
-	walls.push_back(Wall(-6,-2,-5,-1)); 
-	walls.push_back(Wall(5,-2,6,-1)); 
-	walls.push_back(Wall(-2,5,0,6)); 
-	walls.push_back(Wall(-1,-6,0,-5)); 
-	walls.push_back(Wall(-6,-1,-5,0)); 
-	walls.push_back(Wall(5,-1,6,0)); 
-	walls.push_back(Wall(-1,5,1,6)); 
-	walls.push_back(Wall(0,-6,1,-5)); 
-	walls.push_back(Wall(-6,0,-5,1)); 
-	walls.push_back(Wall(5,0,6,1)); 
-	walls.push_back(Wall(0,5,2,6)); 
-	walls.push_back(Wall(1,-6,2,-5)); 
-	walls.push_back(Wall(-6,1,-5,2)); 
-	walls.push_back(Wall(5,1,6,2)); 
-	walls.push_back(Wall(1,5,3,6)); 
-	walls.push_back(Wall(2,-6,3,-5)); 
-	walls.push_back(Wall(-6,2,-5,3)); 
-	walls.push_back(Wall(5,2,6,3)); 
-	walls.push_back(Wall(2,5,4,6)); 
-	walls.push_back(Wall(3,-6,4,-5)); 
-	walls.push_back(Wall(-6,3,-5,4)); 
-	walls.push_back(Wall(5,3,6,4)); 
-	walls.push_back(Wall(3,5,5,6)); 
-	walls.push_back(Wall(4,-6,5,-5)); 
-	walls.push_back(Wall(-6,4,-5,5)); 
-	walls.push_back(Wall(5,4,6,5)); 
-	walls.push_back(Wall(4,5,6,6)); 
-	walls.push_back(Wall(-4,-3.9,-3.5,-3.4)); 
-	walls.push_back(Wall(3.65,-3.9,4.15,-3.4)); 
-	walls.push_back(Wall(3.65,2.2,4.15,2.7)); 
-	walls.push_back(Wall(3.25,2.7,3.75,3.2)); 
-	walls.push_back(Wall(2.9,2.7,3.4,3.2)); 
-	walls.push_back(Wall(2.25,2.7,2.75,3.2)); 
-	walls.push_back(Wall(2.5,2.7,3,3.2)); 
-	walls.push_back(Wall(1.9,2.7,2.4,3.2)); 
-	walls.push_back(Wall(1.45,2.7,1.95,3.2)); 
-	walls.push_back(Wall(0.95,2.7,1.45,3.2)); 
-	walls.push_back(Wall(0.5,2.7,1,3.2)); 
-	walls.push_back(Wall(0.05,2.7,0.55,3.2)); 
-	walls.push_back(Wall(-0.3,2.7,0.2,3.2)); 
-	walls.push_back(Wall(-0.7,2.7,-0.2,3.2)); 
-	walls.push_back(Wall(-1.15,2.7,-0.65,3.2)); 
-	walls.push_back(Wall(-1.6,2.7,-1.1,3.2)); 
-	walls.push_back(Wall(-2,2.7,-1.5,3.2)); 
-	walls.push_back(Wall(-2.45,2.7,-1.95,3.2)); 
-	walls.push_back(Wall(-2.95,2.7,-2.45,3.2)); 
-	walls.push_back(Wall(-3.3,2.7,-2.8,3.2)); 
-	walls.push_back(Wall(-3.75,2.7,-3.25,3.2)); 
-	walls.push_back(Wall(-4.15,2.3,-3.65,2.8)); 
+    theWalls();
 	
 	
 	for(int i = 0; i < walls.size(); i++){
@@ -803,7 +911,7 @@ int WINAPI WinMain (HINSTANCE hInstance,
     
     //variable declarations
     for(int i = 0; i < 5; i++){
-    	objects.push_back(makeObject());
+    	//objects.push_back(makeObject());
 	}
 
     /* program main loop */
